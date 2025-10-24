@@ -1,319 +1,247 @@
-from .interface_arvore import InterfaceArvore
-class NoRN:
-    """Nó da Árvore Rubro-Negra"""
-    def __init__(self, valor):
+class NoRubroNegro:
+    """Nó da árvore Rubro-Negra com valor, cor e referências"""
+    
+    __slots__ = ("valor", "cor", "esquerda", "direita", "pai")
+    
+    def __init__(self, valor=None, cor='PRETO', esquerda=None, direita=None, pai=None):
         self.valor = valor
-        self.cor = 'VERMELHO'  # Novos nós sempre começam vermelhos
-        self.esquerda = None
-        self.direita = None
-        self.pai = None
+        self.cor = cor       # 'PRETO' ou 'VERMELHO'
+        self.esquerda = esquerda
+        self.direita = direita
+        self.pai = pai
 
+class ArvoreRubroNegra:
+    """Implementação de árvore Rubro-Negra com recoloração e rotações"""
 
-class ArvoreRubroNegra(InterfaceArvore):
-    """
-    Implementação de Árvore Rubro-Negra com operações de inserção, remoção e busca.
-    
-    Propriedades mantidas:
-    1. Todo nó é vermelho ou preto
-    2. A raiz é sempre preta
-    3. Todas as folhas (None) são consideradas pretas
-    4. Se um nó é vermelho, seus filhos devem ser pretos
-    5. Todos os caminhos de um nó até suas folhas contêm o mesmo número de nós pretos
-    """
-    
     def __init__(self):
-        self.raiz = None
-        self.tamanho = 0
-    
-    def inserir(self, valor):
-        """Insere um valor na árvore e rebalanceia"""
-        novo_no = NoRN(valor)
-        self.tamanho += 1
-        
-        # Inserção padrão BST
-        if self.raiz is None:
-            self.raiz = novo_no
-            self.raiz.cor = 'PRETO'  # Raiz sempre é preta
-            return
-        
-        atual = self.raiz
-        while True:
-            if valor < atual.valor:
-                if atual.esquerda is None:
-                    atual.esquerda = novo_no
-                    novo_no.pai = atual
-                    break
-                atual = atual.esquerda
-            else:
-                if atual.direita is None:
-                    atual.direita = novo_no
-                    novo_no.pai = atual
-                    break
-                atual = atual.direita
-        
-        # Corrigir violações das propriedades
-        self.corrigir_insercao(novo_no)
-    
-    def corrigir_insercao(self, no):
-        """Corrige violações após inserção"""
-        while no != self.raiz and no.pai.cor == 'VERMELHO':
-            if no.pai == no.pai.pai.esquerda:
-                tio = no.pai.pai.direita
-                
-                # Caso 1: Tio é vermelho
-                if tio and tio.cor == 'VERMELHO':
-                    no.pai.cor = 'PRETO'
-                    tio.cor = 'PRETO'
-                    no.pai.pai.cor = 'VERMELHO'
-                    no = no.pai.pai
+        self.NIL = NoRubroNegro(cor='PRETO')  # Nó sentinela
+        self.raiz = self.NIL
+        self._tamanho = 0
+
+    def rotacao_esquerda(self, no):
+        """Executa rotação à esquerda mantendo propriedades RN"""
+        y = no.direita
+        no.direita = y.esquerda
+        if y.esquerda is not self.NIL:
+            y.esquerda.pai = no
+        y.pai = no.pai
+        if no.pai is self.NIL:
+            self.raiz = y
+        elif no is no.pai.esquerda:
+            no.pai.esquerda = y
+        else:
+            no.pai.direita = y
+        y.esquerda = no
+        no.pai = y
+
+    def rotacao_direita(self, y):
+        """Executa rotação à direita mantendo propriedades RN"""
+        x = y.esquerda
+        y.esquerda = x.direita
+        if x.direita is not self.NIL:
+            x.direita.pai = y
+        x.pai = y.pai
+        if y.pai is self.NIL:
+            self.raiz = x
+        elif y is y.pai.direita:
+            y.pai.direita = x
+        else:
+            y.pai.esquerda = x
+        x.direita = y
+        y.pai = x
+
+    def _fixar_insercao(self, z):
+        """Restaura propriedades da árvore Rubro-Negra após inserção"""
+        while z.pai is not self.NIL and z.pai.cor == 'VERMELHO':
+            if z.pai is z.pai.pai.esquerda:
+                y = z.pai.pai.direita
+                if y is not self.NIL and y.cor == 'VERMELHO':
+                    z.pai.cor = 'PRETO'
+                    y.cor = 'PRETO'
+                    z.pai.pai.cor = 'VERMELHO'
+                    z = z.pai.pai
                 else:
-                    # Caso 2: Tio é preto e nó é filho direito
-                    if no == no.pai.direita:
-                        no = no.pai
-                        self._rotacao_esquerda(no)
-                    
-                    # Caso 3: Tio é preto e nó é filho esquerdo
-                    no.pai.cor = 'PRETO'
-                    no.pai.pai.cor = 'VERMELHO'
-                    self._rotacao_direita(no.pai.pai)
+                    if z is z.pai.direita:
+                        z = z.pai
+                        self.rotacao_esquerda(z)
+                    z.pai.cor = 'PRETO'
+                    z.pai.pai.cor = 'VERMELHO'
+                    self.rotacao_direita(z.pai.pai)
             else:
-                tio = no.pai.pai.esquerda
-                
-                # Caso 1: Tio é vermelho
-                if tio and tio.cor == 'VERMELHO':
-                    no.pai.cor = 'PRETO'
-                    tio.cor = 'PRETO'
-                    no.pai.pai.cor = 'VERMELHO'
-                    no = no.pai.pai
+                y = z.pai.pai.esquerda
+                if y is not self.NIL and y.cor == 'VERMELHO':
+                    z.pai.cor = 'PRETO'
+                    y.cor = 'PRETO'
+                    z.pai.pai.cor = 'VERMELHO'
+                    z = z.pai.pai
                 else:
-                    # Caso 2: Tio é preto e nó é filho esquerdo
-                    if no == no.pai.esquerda:
-                        no = no.pai
-                        self._rotacao_direita(no)
-                    
-                    # Caso 3: Tio é preto e nó é filho direito
-                    no.pai.cor = 'PRETO'
-                    no.pai.pai.cor = 'VERMELHO'
-                    self._rotacao_esquerda(no.pai.pai)
-        
+                    if z is z.pai.esquerda:
+                        z = z.pai
+                        self.rotacao_direita(z)
+                    z.pai.cor = 'PRETO'
+                    z.pai.pai.cor = 'VERMELHO'
+                    self.rotacao_esquerda(z.pai.pai)
         self.raiz.cor = 'PRETO'
-    
-    def remover(self, valor):
-        """Remove um elemento da árvore"""
-        no = self._buscar_no(valor)
-        if no is None:
-            return False
-        
-        self.tamanho -= 1
-        self.remover_no(no)
-        return True
-    
-    def remover_no(self, no):
-        """Remove um nó e rebalanceia a árvore"""
-        # Encontrar o nó a ser removido e seu substituto
-        if no.esquerda and no.direita:
-            # Nó com dois filhos: encontrar sucessor
-            sucessor = self._minimo(no.direita)
-            no.valor = sucessor.valor
-            no = sucessor
-        
-        # Nó tem no máximo um filho
-        filho = no.esquerda if no.esquerda else no.direita
-        
-        if no.cor == 'PRETO':
-            no.cor = filho.cor if filho else 'PRETO'
-            self.corrigir_remocao(no)
-        
-        self._substituir_no(no, filho)
-    
-    def corrigir_remocao(self, no):
-        """Corrige violações após remoção"""
-        while no != self.raiz and (no is None or no.cor == 'PRETO'):
-            if no == no.pai.esquerda:
-                irmao = no.pai.direita
-                
-                # Caso 1: Irmão é vermelho
-                if irmao and irmao.cor == 'VERMELHO':
-                    irmao.cor = 'PRETO'
-                    no.pai.cor = 'VERMELHO'
-                    self._rotacao_esquerda(no.pai)
-                    irmao = no.pai.direita
-                
-                # Caso 2: Irmão é preto e ambos os filhos são pretos
-                if irmao and (not irmao.esquerda or irmao.esquerda.cor == 'PRETO') and \
-                   (not irmao.direita or irmao.direita.cor == 'PRETO'):
-                    irmao.cor = 'VERMELHO'
-                    no = no.pai
+
+    def _transplantar(self, u, v):
+        """Substitui um subtree pela outra"""
+        if u.pai is self.NIL:
+            self.raiz = v
+        elif u is u.pai.esquerda:
+            u.pai.esquerda = v
+        else:
+            u.pai.direita = v
+        v.pai = u.pai
+
+    def _minimo(self, x):
+        """Retorna o nó com o menor valor em uma árvore"""
+        while x.esquerda is not self.NIL:
+            x = x.esquerda
+        return x
+
+    def _fixar_remocao(self, x):
+        """Restaura propriedades da árvore Rubro-Negra após remoção"""
+        while x is not self.raiz and x.cor == 'PRETO':
+            if x is x.pai.esquerda:
+                w = x.pai.direita
+                if w.cor == 'VERMELHO':
+                    w.cor = 'PRETO'
+                    x.pai.cor = 'VERMELHO'
+                    self.rotacao_esquerda(x.pai)
+                    w = x.pai.direita
+                if w.esquerda.cor == 'PRETO' and w.direita.cor == 'PRETO':
+                    w.cor = 'VERMELHO'
+                    x = x.pai
                 else:
-                    # Caso 3: Irmão é preto, filho esquerdo vermelho, direito preto
-                    if irmao and (not irmao.direita or irmao.direita.cor == 'PRETO'):
-                        if irmao.esquerda:
-                            irmao.esquerda.cor = 'PRETO'
-                        irmao.cor = 'VERMELHO'
-                        self._rotacao_direita(irmao)
-                        irmao = no.pai.direita
-                    
-                    # Caso 4: Irmão é preto e filho direito é vermelho
-                    if irmao:
-                        irmao.cor = no.pai.cor
-                        no.pai.cor = 'PRETO'
-                        if irmao.direita:
-                            irmao.direita.cor = 'PRETO'
-                        self._rotacao_esquerda(no.pai)
-                    no = self.raiz
+                    if w.direita.cor == 'PRETO':
+                        w.esquerda.cor = 'PRETO'
+                        w.cor = 'VERMELHO'
+                        self.rotacao_direita(w)
+                        w = x.pai.direita
+                    w.cor = x.pai.cor
+                    x.pai.cor = 'PRETO'
+                    w.direita.cor = 'PRETO'
+                    self.rotacao_esquerda(x.pai)
+                    x = self.raiz
             else:
-                irmao = no.pai.esquerda
-                
-                # Caso 1: Irmão é vermelho
-                if irmao and irmao.cor == 'VERMELHO':
-                    irmao.cor = 'PRETO'
-                    no.pai.cor = 'VERMELHO'
-                    self._rotacao_direita(no.pai)
-                    irmao = no.pai.esquerda
-                
-                # Caso 2: Irmão é preto e ambos os filhos são pretos
-                if irmao and (not irmao.direita or irmao.direita.cor == 'PRETO') and \
-                   (not irmao.esquerda or irmao.esquerda.cor == 'PRETO'):
-                    irmao.cor = 'VERMELHO'
-                    no = no.pai
+                w = x.pai.esquerda
+                if w.cor == 'VERMELHO':
+                    w.cor = 'PRETO'
+                    x.pai.cor = 'VERMELHO'
+                    self.rotacao_direita(x.pai)
+                    w = x.pai.esquerda
+                if w.direita.cor == 'PRETO' and w.esquerda.cor == 'PRETO':
+                    w.cor = 'VERMELHO'
+                    x = x.pai
                 else:
-                    # Caso 3: Irmão é preto, filho direito vermelho, esquerdo preto
-                    if irmao and (not irmao.esquerda or irmao.esquerda.cor == 'PRETO'):
-                        if irmao.direita:
-                            irmao.direita.cor = 'PRETO'
-                        irmao.cor = 'VERMELHO'
-                        self._rotacao_esquerda(irmao)
-                        irmao = no.pai.esquerda
-                    
-                    # Caso 4: Irmão é preto e filho esquerdo é vermelho
-                    if irmao:
-                        irmao.cor = no.pai.cor
-                        no.pai.cor = 'PRETO'
-                        if irmao.esquerda:
-                            irmao.esquerda.cor = 'PRETO'
-                        self._rotacao_direita(no.pai)
-                    no = self.raiz
-        
-        if no:
-            no.cor = 'PRETO'
-    
-    def _substituir_no(self, no, filho):
-        """Substitui um nó por seu filho"""
-        if no.pai is None:
-            self.raiz = filho
-        elif no == no.pai.esquerda:
-            no.pai.esquerda = filho
+                    if w.esquerda.cor == 'PRETO':
+                        w.direita.cor = 'PRETO'
+                        w.cor = 'VERMELHO'
+                        self.rotacao_esquerda(w)
+                        w = x.pai.esquerda
+                    w.cor = x.pai.cor
+                    x.pai.cor = 'PRETO'
+                    w.esquerda.cor = 'PRETO'
+                    self.rotacao_direita(x.pai)
+                    x = self.raiz
+        x.cor = 'PRETO'
+
+    # --- API pública esperada pelos testes ---
+    def inserir(self, valor):
+        novo = NoRubroNegro(valor, cor='VERMELHO', esquerda=self.NIL, direita=self.NIL, pai=self.NIL)
+        y = self.NIL
+        x = self.raiz
+        while x is not self.NIL:
+            y = x
+            if novo.valor < x.valor:
+                x = x.esquerda
+            elif novo.valor > x.valor:
+                x = x.direita
+            else:
+                return  # não insere duplicatas
+        novo.pai = y
+        if y is self.NIL:
+            self.raiz = novo
+        elif novo.valor < y.valor:
+            y.esquerda = novo
         else:
-            no.pai.direita = filho
-        
-        if filho:
-            filho.pai = no.pai
-    
-    def _rotacao_esquerda(self, no):
-        """Realiza rotação à esquerda"""
-        direita = no.direita
-        no.direita = direita.esquerda
-        
-        if direita.esquerda:
-            direita.esquerda.pai = no
-        
-        direita.pai = no.pai
-        
-        if no.pai is None:
-            self.raiz = direita
-        elif no == no.pai.esquerda:
-            no.pai.esquerda = direita
-        else:
-            no.pai.direita = direita
-        
-        direita.esquerda = no
-        no.pai = direita
-    
-    def _rotacao_direita(self, no):
-        """Realiza rotação à direita"""
-        esquerda = no.esquerda
-        no.esquerda = esquerda.direita
-        
-        if esquerda.direita:
-            esquerda.direita.pai = no
-        
-        esquerda.pai = no.pai
-        
-        if no.pai is None:
-            self.raiz = esquerda
-        elif no == no.pai.direita:
-            no.pai.direita = esquerda
-        else:
-            no.pai.esquerda = esquerda
-        
-        esquerda.direita = no
-        no.pai = esquerda
-    
+            y.direita = novo
+        self._fixar_insercao(novo)
+        self._tamanho += 1
+
+    def _buscar_no(self, node, valor):
+        x = node
+        while x is not self.NIL:
+            if valor == x.valor:
+                return x
+            if valor < x.valor:
+                x = x.esquerda
+            else:
+                x = x.direita
+        return self.NIL
+
     def buscar(self, valor):
-        """Busca um valor na árvore"""
-        return self._buscar_no(valor) is not None
-    
-    def _buscar_no(self, valor):
-        """Busca e retorna o nó com o valor especificado"""
-        atual = self.raiz
-        while atual:
-            if valor == atual.valor:
-                return atual
-            elif valor < atual.valor:
-                atual = atual.esquerda
-            else:
-                atual = atual.direita
-        return None
-    
-    def _minimo(self, no):
-        """Encontra o nó com menor valor a partir de um nó"""
-        while no.esquerda:
-            no = no.esquerda
-        return no
-    
-    def imprimir(self):
-        """Imprime a árvore de forma visual"""
-        if self.raiz is None:
-            print("Árvore vazia")
-            return
-        
-        print("\n=== Estrutura da Árvore Rubro-Negra ===")
-        self._imprimir_recursivo(self.raiz, "", True)
-        print()
-    
-    def _imprimir_recursivo(self, no, prefixo, eh_direita):
-        """Imprime a árvore recursivamente"""
-        if no is None:
-            return
-        
-        print(prefixo + ("└── " if eh_direita else "┌── ") + 
-              f"{no.valor} ({no.cor[0]})")
-        
-        if no.esquerda or no.direita:
-            if no.direita:
-                self._imprimir_recursivo(no.direita, 
-                    prefixo + ("    " if eh_direita else "│   "), True)
-            if no.esquerda:
-                self._imprimir_recursivo(no.esquerda, 
-                    prefixo + ("    " if eh_direita else "│   "), False)
-    
+        node = self._buscar_no(self.raiz, valor)
+        return None if node is self.NIL else node
+
     def em_ordem(self):
-        """Retorna lista com valores em ordem"""
-        resultado = []
-        self._em_ordem_recursivo(self.raiz, resultado)
-        return resultado
-    
-    def _em_ordem_recursivo(self, no, resultado):
-        """Percurso em ordem recursivo"""
-        if no:
-            self._em_ordem_recursivo(no.esquerda, resultado)
-            resultado.append(no.valor)
-            self._em_ordem_recursivo(no.direita, resultado)
-    
+        out = []
+        def _inorder(n):
+            if n is self.NIL:
+                return
+            _inorder(n.esquerda)
+            out.append(n.valor)
+            _inorder(n.direita)
+        _inorder(self.raiz)
+        return out
+
+    def imprimir(self):
+        self.mostrar_arvore(self.raiz)
+
+    def mostrar_arvore(self, no, prefixo="", is_esq=True):
+        if no is not self.NIL:
+            cor = '\033[91m' if no.cor == 'VERMELHO' else '\033[90m' # Vermelho ou Cinza para Preto
+            reset = '\033[0m'
+            print(prefixo + ("└── " if is_esq else "┌── ") + f"{cor}{no.valor} ({no.cor}){reset}")
+            if no.esquerda is not self.NIL or no.direita is not self.NIL:
+                novo_prefixo = prefixo + ("    " if is_esq else "│   ")
+                self.mostrar_arvore(no.direita, novo_prefixo, False)
+                self.mostrar_arvore(no.esquerda, novo_prefixo, True)
+
     def obter_tamanho(self):
-        """Retorna o número de elementos na árvore"""
-        return self.tamanho
-    
+        return self._tamanho
+
+    def remover(self, valor):
+        z = self._buscar_no(self.raiz, valor)
+        if z is self.NIL:
+            return False
+        y = z
+        y_original_color = y.cor
+        if z.esquerda is self.NIL:
+            x = z.direita
+            self._transplantar(z, z.direita)
+        elif z.direita is self.NIL:
+            x = z.esquerda
+            self._transplantar(z, z.esquerda)
+        else:
+            y = self._minimo(z.direita)
+            y_original_color = y.cor
+            x = y.direita
+            if y.pai is z:
+                x.pai = y
+            else:
+                self._transplantar(y, y.direita)
+                y.direita = z.direita
+                y.direita.pai = y
+            self._transplantar(z, y)
+            y.esquerda = z.esquerda
+            y.esquerda.pai = y
+            y.cor = z.cor
+        if y_original_color == 'PRETO':
+            # x pode ser self.NIL; _fixar_remocao trata sentinel corretamente
+            self._fixar_remocao(x)
+        self._tamanho -= 1
+        return True
+
     def esta_vazia(self):
-        """Verifica se a árvore está vazia"""
-        return self.raiz is None
+        return self.raiz is self.NIL
