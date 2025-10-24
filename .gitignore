@@ -3,3 +3,4 @@ build/
 *.py[cod]
 **/__pycache__/
 venv/
+.vscode/
