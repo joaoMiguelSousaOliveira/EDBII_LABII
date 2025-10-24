@@ -165,4 +165,4 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\nOperação interrompida pelo usuário. Saindo")
+        print("\n\nOperação interrompida pelo usuário. Saindo...")
